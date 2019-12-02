@@ -9,3 +9,11 @@ body {
   padding: 5px;
   border-style: ridge;
 }
+
+.main {
+  background-color: #FF6347;
+}
+
+.medium {
+  background-color: #FFA500;
+}
