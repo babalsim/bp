@@ -1,8 +1,5 @@
 from tkinter import messagebox
-
 import cv2 as cv
-from PIL import Image, ImageTk
-import numpy as np
 
 
 class Cropper:
@@ -22,7 +19,8 @@ class Cropper:
 
     def _refresh(self):
         i = self.image.copy()
-        cv.rectangle(i, (self.capture.x_start, self.capture.y_start), (self.capture.x_end, self.capture.y_end), (255, 0, 0), 2)
+        cv.rectangle(i, (self.capture.x_start, self.capture.y_start), (self.capture.x_end, self.capture.y_end),
+                     (255, 0, 0), 2)
         cv.imshow('image', i)
         cv.waitKey(1)
 

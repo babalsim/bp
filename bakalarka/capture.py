@@ -1,15 +1,12 @@
-from tkinter import messagebox
-
 import cv2 as cv
 from PIL import Image, ImageTk
-import numpy as np
 
 
 class Capture(cv.VideoCapture):
-    background = None
-    cropping, mouseCropping = False, False
+    background, grayBackground = None, None
     x_start, y_start, x_end, y_end = 0, 0, 0, 0
     sizeX, sizeY = 0, 0
+    x_middle, y_middle = 0, 0
 
     def __init__(self, filename=None):
         if filename is not None:
@@ -56,3 +53,17 @@ class Capture(cv.VideoCapture):
     def getNextFramePhotoImage(self):
         self.grab()
         return self.getCurrentFramePhotoImage()
+
+    def removeHands(self, frame):
+        for i in range(self.y_start, self.y_end):
+            for j in range(self.x_start, self.x_end):
+                r, g, b = map(int, frame[i][j])
+                if r > 65 and g > 40 and b > 30:
+                    # and max(r, g, b) - min(r, g, b) > 15
+                    #  and r > g and r > b):
+                    frame[i][j] = [255, 0, 0]
+        return frame
+
+    def getSubtractedFramePhotoImage(self, frame1, frame2):
+        frame = frame1 - frame2
+        return ImageTk.PhotoImage(image=Image.fromarray(frame).resize((self.sizeX, self.sizeY), Image.ANTIALIAS))
