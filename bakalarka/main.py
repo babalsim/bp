@@ -24,6 +24,7 @@ class Program:
     lowerBlack, higherBlack = [], []
     blackKeys = {}
     pressed = {}
+    rel = []
 
     def __init__(self):
         self._initGUI()
@@ -138,7 +139,7 @@ class Program:
             for x, y in points:
                 if self.capture.grayBackground[y][x] != frame[y][x]:
                     dif += 1
-            if dif/len(points) > 0.999:
+            if dif/len(points) > 0.97:
                 pressed.add(key)
         self.detectBlackPressed(pressed)
 
@@ -150,10 +151,12 @@ class Program:
                 pressed.remove(key)
         for key in pressed:
             self.pressed[key] = time.time()
+        while self.rel:
+            self.pressed.pop(self.rel.pop())
 
     def releaseKey(self, key):
         duration = time.time() - self.pressed[key]
-        self.pressed.remove(key)
+        self.rel.append(key)
         print(f'{key} pressed for {duration}')
 
     def stop(self):
@@ -164,7 +167,7 @@ class Program:
         self.drawFrame()
 
     def drawFrame(self):
-        if self.transcribing.get():
+        if self.transcribing.get() and False:
             frame1 = cv.cvtColor(self.capture.background, cv.COLOR_BGR2GRAY)
             frame2 = cv.cvtColor(self.capture.getCurrentFrameCropped(), cv.COLOR_BGR2GRAY)
             self.currentFrame = self.capture.getSubtractedFramePhotoImage(frame1, frame2)
@@ -179,7 +182,7 @@ class Program:
     def segmentation(self):
         gray = cv.cvtColor(self.capture.background, cv.COLOR_BGR2GRAY)
         gray = cv.GaussianBlur(gray, (3, 3), 0)
-        ret, thresh = cv.threshold(gray, 50, 255, cv.THRESH_BINARY_INV)
+        ret, thresh = cv.threshold(gray, 180, 255, cv.THRESH_BINARY_INV)
         kernel = np.ones((9, 9), np.uint8)
         opening = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel, iterations=1)
         dist_transform = cv.distanceTransform(opening, cv.DIST_L2, 5)
@@ -187,6 +190,14 @@ class Program:
         sure_fg = np.uint8(sure_fg)
         contours, hierarchy = cv.findContours(sure_fg, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
         self.contours = sorted(contours, key=lambda ctr: cv.boundingRect(ctr)[0])
+        tmp = []
+        aux = cv.contourArea(self.contours[2])
+        for i in range(len(self.contours)):
+            if cv.contourArea(self.contours[i]) < aux * 0.5:
+                tmp.append(i)
+        while tmp:
+            self.contours.pop(tmp.pop())
+        print(f'rozpoznanych {len(self.contours)} klaves')
         self.drawAndMapKeys()
 
     def drawAndMapKeys(self):
