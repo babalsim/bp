@@ -26,8 +26,15 @@ class Program:
     pressed = {}
     rel = []
 
-    def __init__(self):
+    def __init__(self, debug=False):
         self._initGUI()
+        if debug:
+            self.load('../dataset/samplek.mp4')
+            self.capture.y_start, self.capture.y_end = 273, 432
+            self.capture.x_start, self.capture.x_end = 200, 772
+            self.capture.x_middle, self.capture.y_middle = 450, 390
+            self.drawFrame()
+            self.setBackground()
         self.master.update()
         self.master.mainloop()
 
@@ -96,9 +103,10 @@ class Program:
         self.duration = self.frame_count / self.fps
         self.scale['to'] = self.duration
 
-    def load(self):
+    def load(self, filename=''):
         try:
-            filename = filedialog.askopenfilename(title="Vyberte súbor")
+            if not filename:
+                filename = filedialog.askopenfilename(title="Vyberte súbor")
             if not path.isfile(filename):
                 raise FileNotFoundError
             self.capture.setVideoFile(filename)
@@ -179,10 +187,11 @@ class Program:
         self.canvas.create_image(0, 0, image=image, anchor=NW)
         self.frame.update()
 
-    def segmentation(self):
+    def segmentation(self, t=180):
         gray = cv.cvtColor(self.capture.background, cv.COLOR_BGR2GRAY)
         gray = cv.GaussianBlur(gray, (3, 3), 0)
-        ret, thresh = cv.threshold(gray, 180, 255, cv.THRESH_BINARY_INV)
+        ret, thresh = cv.threshold(gray, t, 255, cv.THRESH_BINARY_INV)
+        #ret, thresh = cv.adaptiveThreshold(gray,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 3)
         kernel = np.ones((9, 9), np.uint8)
         opening = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel, iterations=1)
         dist_transform = cv.distanceTransform(opening, cv.DIST_L2, 5)
@@ -316,7 +325,7 @@ class Program:
 
 if __name__ == '__main__':
     try:
-        Program()
+        Program(True)
         exit(0)
     except FileExistsError:
         exit(1)
