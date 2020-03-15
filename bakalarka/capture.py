@@ -67,3 +67,6 @@ class Capture(cv.VideoCapture):
     def getSubtractedFramePhotoImage(self, frame1, frame2):
         frame = frame1 - frame2
         return ImageTk.PhotoImage(image=Image.fromarray(frame).resize((self.sizeX, self.sizeY), Image.ANTIALIAS))
+
+    def getPhotoImageFromFrame(self, frame):
+        return ImageTk.PhotoImage(image=Image.fromarray(frame).resize((self.sizeX, self.sizeY), Image.ANTIALIAS))

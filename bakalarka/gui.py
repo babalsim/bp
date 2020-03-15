@@ -1,4 +1,5 @@
-from tkinter import Frame, Canvas, Button, Scale, DoubleVar, Checkbutton, BooleanVar, HORIZONTAL, Tk, messagebox
+from tkinter import Frame, Canvas, Button, Scale, DoubleVar, Checkbutton, BooleanVar, HORIZONTAL, Tk, messagebox, \
+    Spinbox, IntVar, Label
 import cv2 as cv
 
 
@@ -23,9 +24,11 @@ class Gui:
         self._initBackgroundCropGUI()
         self._initPlayMarkGUI()
         self._initCheckButtons()
+        self._initMidiParameters()
+        self._initThreshParameterPicker()
 
     def _initFrameCanvasGUI(self):
-        self.frame = Frame(self.master, width=self.SIZE_X + 250, height=self.SIZE_X * 2 + 100)
+        self.frame = Frame(self.master, width=self.SIZE_X + 250, height=self.SIZE_Y + 100)
         self.frame.pack()
         self.canvas = Canvas(self.frame, width=self.SIZE_X, height=self.SIZE_Y)
         self.canvas.place(x=0, y=0)
@@ -34,39 +37,56 @@ class Gui:
         Button(self.frame, text='Load', padx=10, pady=1, command=self.main.load).place(
             x=self.SIZE_X + 5, y=5)
         Button(self.frame, text='Reset', padx=10, pady=1, command=self.main.reset).place(
-            x=self.SIZE_X + 115, y=5)
+            x=self.SIZE_X + 65, y=5)
 
     def _initExportGUI(self):
-        Button(self.frame, text='Export to MIDI', padx=10, pady=1, command=self.main.exportMIDI).place(
-            x=self.SIZE_X + 5, y=45)
-        Button(self.frame, text='Export to MusicXML', padx=10, pady=1, command=self.main.exportMusicXML).place(
-            x=self.SIZE_X + 115, y=45)
+        Button(self.frame, text='Export', padx=10, pady=1, command=self.main.export).place(
+            x=self.SIZE_X + 125, y=5)
 
     def _initTimeControlGUI(self):
         self.position = DoubleVar(0)
-        self.scale = Scale(self.frame, label='----', from_=0, orient=HORIZONTAL,
+        self.scale = Scale(self.frame, from_=0, orient=HORIZONTAL,
                            length=self.SIZE_X, tickinterval=15, command=self.updatePosition, variable=self.position)
-        self.scale.place(x=20, y=self.SIZE_X + 20)
+        self.scale.place(x=0, y=self.SIZE_Y + 20)
 
     def _initBackgroundCropGUI(self):
         Button(self.frame, text='Set Background', padx=10, pady=1, command=self.main.setBackground).place(
             x=self.SIZE_X + 5, y=95)
         Button(self.frame, text='Crop Keyboard', padx=10, pady=1, command=self.main.cropKeyboardArea).place(
-            x=self.SIZE_X + 115, y=95)
+            x=self.SIZE_X + 5, y=35)
 
     def _initPlayMarkGUI(self):
         self.playOrStopButton = Button(self.frame, text='Play', padx=10, pady=1, command=self.playOrStop)
         self.playOrStopButton.place(x=self.SIZE_X + 5, y=135)
         Button(self.frame, text='Mark C', padx=10, pady=1, command=self.main.markKeyboardMiddle).place(
-            x=self.SIZE_X + 115, y=135)
+            x=self.SIZE_X + 115, y=35)
 
     def _initCheckButtons(self):
-        self.handFilter = BooleanVar()
-        self.handFilter.set(False)
-        Checkbutton(self.frame, text="HandFilter", variable=self.handFilter).place(x=self.SIZE_X + 5, y=165)
-        self.transcribing = BooleanVar()
-        self.transcribing.set(False)
-        Checkbutton(self.frame, text="Transcribing", variable=self.transcribing).place(x=self.SIZE_X + 5, y=185)
+        self.handFilter = BooleanVar(value=False)
+        Checkbutton(self.frame, text='HandFilter', variable=self.handFilter).place(x=self.SIZE_X + 5, y=165)
+        self.transcribing = BooleanVar(value=False)
+        Checkbutton(self.frame, text='Transcribing', variable=self.transcribing).place(x=self.SIZE_X + 5, y=185)
+
+    def _initMidiParameters(self):
+        self.tempo = IntVar(value=60)
+        Label(self.frame, text='Tempo').place(x=self.SIZE_X + 5, y=220)
+        Spinbox(self.frame, from_=20, to=150, textvariable=self.tempo, width=5).place(x=self.SIZE_X + 5, y=240)
+        self.transpose = IntVar(value=0)
+        Label(self.frame, text='Transpose').place(x=self.SIZE_X + 55, y=220)
+        Spinbox(self.frame, from_=-10, to=10, textvariable=self.transpose, width=5).place(x=self.SIZE_X + 55, y=240)
+
+    def _initThreshParameterPicker(self):
+        self.thresh = IntVar(value=180)
+        Label(self.frame, text='Thresh').place(x=self.SIZE_X + 135, y=85)
+        Spinbox(self.frame, from_=0, to=255, textvariable=self.thresh, width=5,
+                command=self._showThreshParameter).place(x=self.SIZE_X + 135, y=105)
+
+    def _showThreshParameter(self):
+        gray = cv.cvtColor(self.main.capture.getCurrentFrameCropped(), cv.COLOR_BGR2GRAY)
+        gray = cv.GaussianBlur(gray, (3, 3), 0)
+        ret, thresh = cv.threshold(gray, self.thresh.get(), 255, cv.THRESH_BINARY_INV)
+        self.threshExampleImage = self.main.capture.getPhotoImageFromFrame(thresh)
+        self.main.drawImage(self.threshExampleImage)
 
     def playOrStop(self):
         if self.main.playing:

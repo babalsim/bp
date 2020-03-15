@@ -4,11 +4,15 @@ import numpy as np
 import cv2 as cv
 import time
 from tkinter import filedialog, messagebox, NW
-from os import path
+from os import path, remove
+
+from music21 import converter
+
 from capture import Capture
 from cropper import Cropper
 from marker import Marker
 from gui import Gui
+from midiutil import MIDIFile
 
 
 class Program:
@@ -24,17 +28,16 @@ class Program:
     blackKeys = {}
     pressed = {}
     rel = []
+    forExport = []
 
     def __init__(self, debug=False):
         self.gui = Gui(self, self.SIZE_X, self.SIZE_Y)
-        # if debug:
-        #     self.load('../dataset/samplek.mp4')
-        #     self.capture.y_start, self.capture.y_end = 273, 432
-        #     self.capture.x_start, self.capture.x_end = 200, 772
-        #     self.capture.x_middle, self.capture.y_middle = 450, 390
-        #     self.drawFrame()
-        #     self.setBackground()
-        self.gui.master.update()
+        if debug:
+            self.load('../dataset/samplek.mp4')
+            self.capture.y_start, self.capture.y_end = 273, 432
+            self.capture.x_start, self.capture.x_end = 200, 772
+            self.capture.x_middle, self.capture.y_middle = 450, 390
+            self.drawFrame()
         self.gui.master.mainloop()
 
     def __del__(self):
@@ -80,14 +83,15 @@ class Program:
             else:
                 pressed.remove(key)
         for key in pressed:
-            self.pressed[key] = time.time()
+            self.pressed[key] = self.capture.get(cv.CAP_PROP_POS_MSEC)
         while self.rel:
             self.pressed.pop(self.rel.pop())
 
     def releaseKey(self, key):
-        duration = time.time() - self.pressed[key]
+        duration = self.capture.get(cv.CAP_PROP_POS_MSEC) - self.pressed[key]
         self.rel.append(key)
-        print(f'{key} pressed for {duration}')
+        self.forExport.append((key, duration, self.pressed[key]))
+        print(f'{key} pressed for {duration} ms')
 
     def showFrame(self):
         self.drawFrame()
@@ -105,10 +109,10 @@ class Program:
         self.gui.canvas.create_image(0, 0, image=image, anchor=NW)
         self.gui.frame.update()
 
-    def segmentation(self, t=180):
+    def segmentation(self):
         gray = cv.cvtColor(self.capture.background, cv.COLOR_BGR2GRAY)
         gray = cv.GaussianBlur(gray, (3, 3), 0)
-        ret, thresh = cv.threshold(gray, t, 255, cv.THRESH_BINARY_INV)
+        ret, thresh = cv.threshold(gray, self.gui.thresh.get(), 255, cv.THRESH_BINARY_INV)
         # ret, thresh = cv.adaptiveThreshold(gray,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 3)
         kernel = np.ones((9, 9), np.uint8)
         opening = cv.morphologyEx(thresh, cv.MORPH_OPEN, kernel, iterations=1)
@@ -165,11 +169,33 @@ class Program:
     def reset(self):
         raise NotImplementedError()
 
-    def exportMIDI(self):
-        raise NotImplementedError()
+    def export(self):
+        self.gui.stop()
+        fileTypes = [('MIDI File', '.midi'), ('MusicXML File', '.musicxml')]
+        filename = filedialog.asksaveasfilename(filetypes=fileTypes, defaultextension='.midi')
+        if '.midi' in filename:
+            self._exportMIDI(filename)
+        elif '.musicxml' in filename:
+            self._exportMusicXML(filename)
+        else:
+            raise RuntimeError('Chosen Wrong File Extension')
 
-    def exportMusicXML(self):
-        raise NotImplementedError()
+    def _exportMIDI(self, filename='.tmpMidiFileForExport'):
+        self.gui.stop()
+        midi = MIDIFile(1)
+        midi.addTempo(0, 0, self.gui.tempo.get())
+        for pitch, duration, start in self.forExport:
+            midi.addNote(0, 0, pitch+self.gui.transpose.get(), start/1000, duration/1000, 100)
+        with open(filename, 'wb') as file:
+            midi.writeFile(file)
+        print(f'Successfully exported to {filename}')
+
+    def _exportMusicXML(self, filename):
+        self._exportMIDI()
+        score = converter.parse('.tmpMidiFileForExport', format='midi')
+        remove('.tmpMidiFileForExport')
+        score.write('musicxml', filename)
+        print(f'Successfully exported to {filename}')
 
     def setBackground(self):
         self.capture.background = self.capture.getCurrentFrameCropped()
