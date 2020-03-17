@@ -15,9 +15,7 @@ class Gui:
         self._initGUI()
 
     def _initGUI(self):
-        self.master = Tk()
-        self.master.title('Bakalarka')
-        self._initFrameCanvasGUI()
+        self._initMasterFrameCanvasGUI()
         self._initLoadResetGUI()
         self._initExportGUI()
         self._initTimeControlGUI()
@@ -27,7 +25,9 @@ class Gui:
         self._initMidiParameters()
         self._initThreshParameterPicker()
 
-    def _initFrameCanvasGUI(self):
+    def _initMasterFrameCanvasGUI(self):
+        self.master = Tk()
+        self.master.title('Bakalarka')
         self.frame = Frame(self.master, width=self.SIZE_X + 250, height=self.SIZE_Y + 100)
         self.frame.pack()
         self.canvas = Canvas(self.frame, width=self.SIZE_X, height=self.SIZE_Y)
@@ -102,7 +102,7 @@ class Gui:
         while self.main.playing:
             try:
                 self.main.step()
-            except FileNotFoundError:######################################neskor prepisat na TypeError
+            except TypeError:######################################neskor prepisat na TypeError
                 self.stop()
 
     def stop(self):

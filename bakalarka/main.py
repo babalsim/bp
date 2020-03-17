@@ -1,4 +1,4 @@
-# pip install opencv-python MIDIUtil tk
+# pip install opencv-python MIDIUtil music21 Pillow tk
 
 import numpy as np
 import cv2 as cv
@@ -97,7 +97,7 @@ class Program:
         self.drawFrame()
 
     def drawFrame(self):
-        if self.gui.transcribing.get() and False:
+        if self.gui.transcribing.get() and False: ##################################################### to do
             frame1 = cv.cvtColor(self.capture.background, cv.COLOR_BGR2GRAY)
             frame2 = cv.cvtColor(self.capture.getCurrentFrameCropped(), cv.COLOR_BGR2GRAY)
             self.currentFrame = self.capture.getSubtractedFramePhotoImage(frame1, frame2)
@@ -249,7 +249,7 @@ class Program:
 
 if __name__ == '__main__':
     try:
-        Program(True)
+        Program()
         exit(0)
     except FileExistsError:
         exit(1)
