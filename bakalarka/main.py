@@ -13,6 +13,8 @@ from cropper import Cropper
 from marker import Marker
 from gui import Gui
 from midiutil import MIDIFile
+from segmentBlack import SegmentBlack
+from segmentWhite import SegmentWhite
 
 
 class Program:
@@ -97,7 +99,7 @@ class Program:
         self.drawFrame()
 
     def drawFrame(self):
-        if self.gui.transcribing.get() and False: #####################################################  to do
+        if self.gui.transcribing.get() and False:  #####################################################  to do
             frame1 = cv.cvtColor(self.capture.background, cv.COLOR_BGR2GRAY)
             frame2 = cv.cvtColor(self.capture.getCurrentFrameCropped(), cv.COLOR_BGR2GRAY)
             self.currentFrame = self.capture.getSubtractedFramePhotoImage(frame1, frame2)
@@ -108,77 +110,6 @@ class Program:
     def drawImage(self, image):
         self.gui.canvas.create_image(0, 0, image=image, anchor=NW)
         self.gui.frame.update()
-
-    # noinspection DuplicatedCode
-    def _getBlackKeysContours(self):
-        gray = cv.cvtColor(self.capture.background, cv.COLOR_BGR2GRAY)
-        gray = cv.GaussianBlur(gray, (3, 3), 0)
-        ret, thresh = cv.threshold(gray, self.gui.thresh.get(), 255, cv.THRESH_BINARY_INV)
-        kernel = np.ones((5, 5), np.uint8)
-        thresh = cv.dilate(thresh, kernel, iterations=1)
-        thresh = cv.erode(thresh, kernel, iterations=1)
-        dist_transform = cv.distanceTransform(thresh, cv.DIST_LABEL_PIXEL, 5)
-        ret, sure_fg = cv.threshold(dist_transform, 0.05 * dist_transform.max(), 255, 0)
-        sure_fg = np.uint8(sure_fg)
-        contours, hierarchy = cv.findContours(sure_fg, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
-        return contours
-
-    # noinspection DuplicatedCode
-    def _getWhiteKeysContours(self):
-        croppedKeys = self.capture.background[0:self.blackKeysYBound, 0:len(self.capture.background[0])]
-        gray = cv.cvtColor(croppedKeys, cv.COLOR_BGR2GRAY)
-        gray = cv.GaussianBlur(gray, (3, 3), 0)
-        ret, thresh = cv.threshold(gray, self.gui.thresh.get(), 255, cv.THRESH_BINARY)
-        kernel = np.ones((5, 5), np.uint8)
-        thresh = cv.dilate(thresh, kernel, iterations=1)
-        dist_transform = cv.distanceTransform(thresh, cv.DIST_LABEL_PIXEL, 5)
-        ret, sure_fg = cv.threshold(dist_transform, 0.05 * dist_transform.max(), 255, 0)
-        sure_fg = np.uint8(sure_fg)
-        contours, hierarchy = cv.findContours(sure_fg, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
-        contours = self._splitWideContours(contours)
-        return contours
-
-    def _blackKeysSegmentation(self):
-        rawContours = self._getBlackKeysContours()
-        contours = self._filterContours(rawContours)
-        self._setBlackKeysYBound(contours)
-        contours.sort(key=lambda ctr: cv.boundingRect(ctr)[0])
-        print(f'Detected {len(contours)} Black Keys')
-        self.drawAndMapKeys(contours, True)
-
-    def _setBlackKeysYBound(self, contours):
-        averageYBound = sum([cv.boundingRect(cnt)[3] for cnt in contours]) / len(contours)
-        self.blackKeysYBound = int(averageYBound * 0.95)
-
-    def _whiteKeysSegmentation(self):
-        rawContours = self._getWhiteKeysContours()
-        contours = self._filterContours(self._splitWideContours(rawContours))
-        contours.sort(key=lambda ctr: cv.boundingRect(ctr)[0])
-        print(f'Detected {len(contours)} White Keys')
-        self.drawAndMapKeys(contours, False)
-
-    def _splitWideContours(self, contours):
-        averageWidth = sum([cv.boundingRect(cnt)[2] for cnt in contours]) / len(contours)
-        biggerContours = [cnt for cnt in enumerate(contours) if cv.boundingRect(cnt[1])[2] > averageWidth * 1.5]
-        while biggerContours:
-            index, cnt = biggerContours.pop()
-            contours.pop(index)
-            a, b = self._splitContour(cnt)
-            contours.append(a)
-            contours.append(b)
-        return contours
-
-    def _splitContour(self, cnt):
-        a, b = [], []
-        for point in cnt:
-            box = sorted(cv.boxPoints(cv.minAreaRect(cnt)).tolist(), key=lambda x: x[1])
-            x1, x2 = self._getBounds(box)
-            x, y = point[0]
-            if x < x1 and y < 25 or x < x2 and y > 25 or x in range(min(round(x1), round(x2))):
-                a.append([[x, y]])
-            else:
-                b.append([[x, y]])
-        return np.asarray(a), np.asarray(b)
 
     @staticmethod
     def _getBounds(box):
@@ -200,27 +131,9 @@ class Program:
         return contours
 
     def segmentation(self):
-        self._blackKeysSegmentation()
-        self._whiteKeysSegmentation()
+        self.segmentBlack = SegmentBlack(self)
+        self.segmentWhite = SegmentWhite(self)
         cv.waitKey(0)
-
-    def drawAndMapKeys(self, contours, black):
-        colors = self.getColorsFromFile()
-        img = self.capture.background.copy()
-        for i in range(len(contours)):
-            r, g, b = colors[i]
-            key = np.zeros((len(img), len(img[0]), 3), np.uint8)
-            M = cv.moments(contours[i])
-            x = int(M['m10'] / M['m00'])
-            y = int(M['m01'] / M['m00'])
-            cv.drawContours(key, [contours[i]], -1, (r, g, b), -1)
-            cv.drawContours(img, [contours[i]], -1, (r, g, b), -1)
-            cv.putText(img, str(i), (x - 5, y + 100), cv.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
-            if black:
-                self.assignBlackKey(x, key)
-            else:
-                self.assignWhiteKey(x, key)
-        self.showSegmentedKeys(img, black)
 
     @staticmethod
     def showSegmentedKeys(img, black):
@@ -228,24 +141,6 @@ class Program:
             cv.imshow('Black Keys', img)
         else:
             cv.imshow('White Keys', img)
-
-    def assignBlackKey(self, x, key):
-        if self.capture.x_middle == 0:
-            raise AttributeError()
-        points = self.getNonZeroPoints(key)
-        if x < self.capture.x_middle:
-            self.lowerBlack.append(points)
-        else:
-            self.higherBlack.append(points)
-
-    def assignWhiteKey(self, x, key):
-        if self.capture.x_middle == 0:
-            raise AttributeError()
-        points = self.getNonZeroPoints(key)
-        if x < self.capture.x_middle:
-            self.lowerWhite.append(points)
-        else:
-            self.higherWhite.append(points)
 
     @staticmethod
     def getNonZeroPoints(image):
@@ -276,7 +171,7 @@ class Program:
         midi = MIDIFile(1)
         midi.addTempo(0, 0, self.gui.tempo.get())
         for pitch, duration, start in self.forExport:
-            midi.addNote(0, 0, pitch+self.gui.transpose.get(), start/1000, duration/1000, 100)
+            midi.addNote(0, 0, pitch + self.gui.transpose.get(), start / 1000, duration / 1000, 100)
         with open(filename, 'wb') as file:
             midi.writeFile(file)
 
@@ -293,54 +188,8 @@ class Program:
         self.mapKeys()
 
     def mapKeys(self):
-        self.mapBlackKeys()
-        self.mapWhiteKeys()
-
-    def mapBlackKeys(self):
-        self._mapBlackHigherKeys()
-        self._mapBlackLowerKeys()
-
-    def _mapBlackHigherKeys(self):
-        auxHigher = [2, 3, 2, 2, 3] * 5
-        midiHigher = [61]
-        for step in auxHigher:
-            midiHigher.append(midiHigher[-1] + step)
-        for key in zip(midiHigher, self.higherBlack):
-            midiNumber, points = key
-            self.blackKeys[midiNumber] = points
-
-    def _mapBlackLowerKeys(self):
-        auxLower = [2, 2, 3, 2, 3] * 5
-        midiLower = [58]
-        for step in auxLower:
-            midiLower.append(midiLower[-1] - step)
-        self.lowerBlack.reverse()
-        for key in zip(midiLower, self.lowerBlack):
-            midiNumber, points = key
-            self.blackKeys[midiNumber] = points
-
-    def mapWhiteKeys(self):
-        self._mapWhiteHigherKeys()
-        self._mapWhiteLowerKeys()
-
-    def _mapWhiteHigherKeys(self):
-        auxHigher = [2, 1, 2, 2, 2, 1, 2] * 5
-        midiHigher = [62]
-        for step in auxHigher:
-            midiHigher.append(midiHigher[-1] + step)
-        for key in zip(midiHigher, self.higherBlack):
-            midiNumber, points = key
-            self.whiteKeys[midiNumber] = points
-
-    def _mapWhiteLowerKeys(self):
-        auxLower = [1, 2, 2, 2, 1, 2, 2] * 5
-        midiLower = [60]
-        for step in auxLower:
-            midiLower.append(midiLower[-1] - step)
-        self.lowerWhite.reverse()
-        for key in zip(midiLower, self.lowerWhite):
-            midiNumber, points = key
-            self.whiteKeys[midiNumber] = points
+        self.segmentBlack.mapBlackKeys()
+        self.segmentWhite.mapWhiteKeys()
 
     def cropKeyboardArea(self):
         Cropper(self.capture)
@@ -358,6 +207,7 @@ class Program:
     def show(self, img):
         cv.imshow('tmp', img)
         cv.waitKey(0)
+
 
 if __name__ == '__main__':
     try:
