@@ -31,6 +31,7 @@ class Program:
     pressed = {}
     rel = []
     forExport = []
+    segmentBlack, segmentWhite = None, None
 
     def __init__(self, debug=False):
         self.gui = Gui(self, self.SIZE_X, self.SIZE_Y)
@@ -81,7 +82,7 @@ class Program:
     def detectBlackPressed(self, pressed):
         for key in self.pressed.keys():
             if key not in pressed:
-                self.releaseKey(key)
+                self.releaseBlackKey(key)
             else:
                 pressed.remove(key)
         for key in pressed:
@@ -89,7 +90,7 @@ class Program:
         while self.rel:
             self.pressed.pop(self.rel.pop())
 
-    def releaseKey(self, key):
+    def releaseBlackKey(self, key):
         duration = self.capture.get(cv.CAP_PROP_POS_MSEC) - self.pressed[key]
         self.rel.append(key)
         self.forExport.append((key, duration, self.pressed[key]))
@@ -122,18 +123,13 @@ class Program:
     def _filterContours(contours):
         forRemove = []
         averageArea = sum([cv.contourArea(cnt) for cnt in contours]) / len(contours)
-        thresh = averageArea * 0.5
+        thresh = averageArea * 0.6
         for i in range(len(contours)):
             if cv.contourArea(contours[i]) < thresh:
                 forRemove.append(i)
         while forRemove:
             contours.pop(forRemove.pop())
         return contours
-
-    def segmentation(self):
-        self.segmentBlack = SegmentBlack(self)
-        self.segmentWhite = SegmentWhite(self)
-        cv.waitKey(0)
 
     @staticmethod
     def showSegmentedKeys(img, black):
@@ -187,6 +183,11 @@ class Program:
         self.segmentation()
         self.mapKeys()
 
+    def segmentation(self):
+        self.segmentBlack = SegmentBlack(self)
+        self.segmentWhite = SegmentWhite(self)
+        cv.waitKey(0)
+
     def mapKeys(self):
         self.segmentBlack.mapBlackKeys()
         self.segmentWhite.mapWhiteKeys()
@@ -211,7 +212,7 @@ class Program:
 
 if __name__ == '__main__':
     try:
-        Program(True)
+        Program()
         exit(0)
     except FileExistsError:
         exit(1)

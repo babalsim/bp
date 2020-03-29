@@ -76,7 +76,7 @@ class Gui:
         Spinbox(self.frame, from_=-10, to=10, textvariable=self.transpose, width=5).place(x=self.SIZE_X + 55, y=240)
 
     def _initThreshParameterPicker(self):
-        self.thresh = IntVar(value=180)
+        self.thresh = IntVar(value=85)
         Label(self.frame, text='Thresh').place(x=self.SIZE_X + 135, y=85)
         Spinbox(self.frame, from_=0, to=255, textvariable=self.thresh, width=5,
                 command=self._showThreshParameter).place(x=self.SIZE_X + 135, y=105)
