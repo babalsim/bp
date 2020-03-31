@@ -1,12 +1,17 @@
+from os import path
 from tkinter import Frame, Canvas, Button, Scale, DoubleVar, Checkbutton, BooleanVar, HORIZONTAL, Tk, messagebox, \
-    Spinbox, IntVar, Label
+    Spinbox, IntVar, Label, filedialog, NW
 import cv2 as cv
+from cropper import Cropper
+from marker import Marker
+from segmentation import Segmentation
 
 
 class Gui:
     fps = None
     frame_count = None
     duration = None
+    currentFrameImage = None
 
     def __init__(self, main, size_x, size_y):
         self.main = main
@@ -34,10 +39,8 @@ class Gui:
         self.canvas.place(x=0, y=0)
 
     def _initLoadResetGUI(self):
-        Button(self.frame, text='Load', padx=10, pady=1, command=self.main.load).place(
+        Button(self.frame, text='Load', padx=10, pady=1, command=self.load).place(
             x=self.SIZE_X + 5, y=5)
-        Button(self.frame, text='Reset', padx=10, pady=1, command=self.main.reset).place(
-            x=self.SIZE_X + 65, y=5)
 
     def _initExportGUI(self):
         Button(self.frame, text='Export', padx=10, pady=1, command=self.main.export).place(
@@ -46,19 +49,19 @@ class Gui:
     def _initTimeControlGUI(self):
         self.position = DoubleVar(0)
         self.scale = Scale(self.frame, from_=0, orient=HORIZONTAL,
-                           length=self.SIZE_X, tickinterval=15, command=self.updatePosition, variable=self.position)
+                           length=self.SIZE_X, tickinterval=15, command=self._updatePosition, variable=self.position)
         self.scale.place(x=0, y=self.SIZE_Y + 20)
 
     def _initBackgroundCropGUI(self):
-        Button(self.frame, text='Set Background', padx=10, pady=1, command=self.main.setBackground).place(
+        Button(self.frame, text='Set Background', padx=10, pady=1, command=self._setBackground).place(
             x=self.SIZE_X + 5, y=95)
-        Button(self.frame, text='Crop Keyboard', padx=10, pady=1, command=self.main.cropKeyboardArea).place(
+        Button(self.frame, text='Crop Keyboard', padx=10, pady=1, command=self._cropKeyboardArea).place(
             x=self.SIZE_X + 5, y=35)
 
     def _initPlayMarkGUI(self):
-        self.playOrStopButton = Button(self.frame, text='Play', padx=10, pady=1, command=self.playOrStop)
+        self.playOrStopButton = Button(self.frame, text='Play', padx=10, pady=1, command=self._playOrStop)
         self.playOrStopButton.place(x=self.SIZE_X + 5, y=135)
-        Button(self.frame, text='Mark C', padx=10, pady=1, command=self.main.markKeyboardMiddle).place(
+        Button(self.frame, text='Mark C', padx=10, pady=1, command=self._markKeyboardMiddle).place(
             x=self.SIZE_X + 115, y=35)
 
     def _initCheckButtons(self):
@@ -86,9 +89,9 @@ class Gui:
         gray = cv.GaussianBlur(gray, (3, 3), 0)
         ret, thresh = cv.threshold(gray, self.thresh.get(), 255, cv.THRESH_BINARY_INV)
         self.threshExampleImage = self.main.capture.getPhotoImageFromFrame(thresh)
-        self.main.drawImage(self.threshExampleImage)
+        self.drawImage(self.threshExampleImage)
 
-    def playOrStop(self):
+    def _playOrStop(self):
         if self.main.playing:
             self.stop()
         elif self.main.capture is not None and self.main.capture.isOpened():
@@ -99,11 +102,9 @@ class Gui:
     def play(self):
         self.main.playing = True
         self.playOrStopButton['text'] = 'Stop'
-        while self.main.playing:
-            try:
-                self.main.step()
-            except TypeError:######################################neskor prepisat na TypeError
-                self.stop()
+        while self.main.playing and (self.main.capture.get(cv.CAP_PROP_POS_FRAMES) < self.frame_count):
+            self.main.step()
+        self.stop()
 
     def stop(self):
         self.main.playing = False
@@ -115,10 +116,57 @@ class Gui:
         self.duration = self.frame_count / self.fps
         self.scale['to'] = self.duration
 
-    def updatePosition(self, position):
+    def _updatePosition(self, position):
         frameNumber = int(position) * self.fps
         self.main.capture.set(cv.CAP_PROP_POS_FRAMES, frameNumber)
-        self.main.showFrame()
+        self.showFrame()
 
     def showPosition(self):
         self.position.set(self.main.capture.get(cv.CAP_PROP_POS_MSEC) / 1000)
+
+    def load(self, filename=''):
+        try:
+            if not filename:
+                filename = filedialog.askopenfilename(title="Vyberte súbor")
+            if not path.isfile(filename):
+                raise FileNotFoundError
+            self.main.capture.setVideoFile(filename)
+            self.main.capture.setCanvasSize(self.SIZE_X, self.SIZE_Y)
+            self.setTimeControlGUI()
+            self.showFrame()
+            self.frame.update()
+        except FileNotFoundError:
+            messagebox.showinfo("Chyba", "Súbor sa nepodarilo prečítať")
+
+    def showFrame(self):
+        self.drawFrame()
+
+    def drawFrame(self):
+        if self.transcribing.get() and False:  #####################################################  to do
+            frame1 = cv.cvtColor(self.main.capture.background, cv.COLOR_BGR2GRAY)
+            frame2 = cv.cvtColor(self.main.capture.getCurrentFrameCropped(), cv.COLOR_BGR2GRAY)
+            self.currentFrameImage = self.main.capture.getSubtractedFramePhotoImage(frame1, frame2)
+        else:
+            self.currentFrameImage = self.main.capture.getCurrentFramePhotoImage()
+        self.drawImage(self.currentFrameImage)
+
+    def drawImage(self, image):
+        self.canvas.create_image(0, 0, image=image, anchor=NW)
+        self.frame.update()
+
+    def _cropKeyboardArea(self):
+        Cropper(self.main.capture)
+        self.drawFrame()
+
+    def _markKeyboardMiddle(self):
+        Marker(self.main.capture)
+
+    def _setBackground(self):
+        self.main.capture.background = self.main.capture.getCurrentFrameCropped()
+        self.main.capture.grayBackground = cv.cvtColor(self.main.capture.background, cv.COLOR_BGR2GRAY)
+        Segmentation(self.main)
+
+    @staticmethod
+    def showExample(img, name='sample'):
+        cv.imshow(name, img)
+        cv.waitKey(0)

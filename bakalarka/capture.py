@@ -13,6 +13,8 @@ class Capture(cv.VideoCapture):
             super().__init__(filename)
             self.grab()
             self.setDefaultKeyArea()
+        else:
+            super().__init__()
 
     def setVideoFile(self, filename):
         self.__init__(filename)

@@ -3,16 +3,18 @@ import numpy as np
 
 
 class SegmentWhite:
-    def __init__(self, main):
-        self.main = main
+    lowerWhite, higherWhite = [], []
+
+    def __init__(self, segmentation):
+        self.segmentation = segmentation
         self._whiteKeysSegmentation()
 
     # noinspection DuplicatedCode
     def _getWhiteKeysContours(self):
-        croppedKeys = self.main.capture.background[0:self.main.blackKeysYBound, 0:len(self.main.capture.background[0])]
+        croppedKeys = self.segmentation.main.capture.background[0:self.segmentation.blackKeysYBound, 0:len(self.segmentation.main.capture.background[0])]
         gray = cv.cvtColor(croppedKeys, cv.COLOR_BGR2GRAY)
         gray = cv.GaussianBlur(gray, (3, 3), 0)
-        ret, thresh = cv.threshold(gray, self.main.gui.thresh.get(), 255, cv.THRESH_BINARY)
+        ret, thresh = cv.threshold(gray, self.segmentation.main.gui.thresh.get(), 255, cv.THRESH_BINARY)
         kernel = np.ones((5, 5), np.uint8)
         thresh = cv.dilate(thresh, kernel, iterations=1)
         dist_transform = cv.distanceTransform(thresh, cv.DIST_LABEL_PIXEL, 5)
@@ -24,10 +26,10 @@ class SegmentWhite:
 
     def _whiteKeysSegmentation(self):
         rawContours = self._getWhiteKeysContours()
-        contours = self.main._filterContours(self._splitWideContours(rawContours))
+        contours = self.segmentation.filterContours(self._splitWideContours(rawContours))
         contours.sort(key=lambda ctr: cv.boundingRect(ctr)[0])
         print(f'Detected {len(contours)} White Keys')
-        self.drawAndMapKeys(contours, False)
+        self.drawAndMapKeys(contours)
 
     def _splitWideContours(self, contours):
         averageWidth = sum([cv.boundingRect(cnt)[2] for cnt in contours]) / len(contours)
@@ -44,7 +46,7 @@ class SegmentWhite:
         a, b = [], []
         for point in cnt:
             box = sorted(cv.boxPoints(cv.minAreaRect(cnt)).tolist(), key=lambda x: x[1])
-            x1, x2 = self.main._getBounds(box)
+            x1, x2 = self._getBounds(box)
             x, y = point[0]
             if x < x1 and y < 25 or x < x2 and y > 25 or x in range(min(round(x1), round(x2))):
                 a.append([[x, y]])
@@ -53,13 +55,13 @@ class SegmentWhite:
         return np.asarray(a), np.asarray(b)
 
     def assignWhiteKey(self, x, key):
-        if self.main.capture.x_middle == 0:
+        if self.segmentation.main.capture.x_middle == 0:
             raise AttributeError()
-        points = self.main.getNonZeroPoints(key)
-        if x < self.main.capture.x_middle:
-            self.main.lowerWhite.append(points)
+        points = self.segmentation.getNonZeroPoints(key)
+        if x < self.segmentation.main.capture.x_middle:
+            self.lowerWhite.append(points)
         else:
-            self.main.higherWhite.append(points)
+            self.higherWhite.append(points)
 
     def mapWhiteKeys(self):
         self._mapWhiteHigherKeys()
@@ -70,23 +72,23 @@ class SegmentWhite:
         midiHigher = [62]
         for step in auxHigher:
             midiHigher.append(midiHigher[-1] + step)
-        for key in zip(midiHigher, self.main.higherBlack):
+        for key in zip(midiHigher, self.higherWhite):
             midiNumber, points = key
-            self.main.whiteKeys[midiNumber] = points
+            self.segmentation.main.whiteKeys[midiNumber] = points
 
     def _mapWhiteLowerKeys(self):
         auxLower = [1, 2, 2, 2, 1, 2, 2] * 5
         midiLower = [60]
         for step in auxLower:
             midiLower.append(midiLower[-1] - step)
-        self.main.lowerWhite.reverse()
-        for key in zip(midiLower, self.main.lowerWhite):
+        self.lowerWhite.reverse()
+        for key in zip(midiLower, self.lowerWhite):
             midiNumber, points = key
-            self.main.whiteKeys[midiNumber] = points
+            self.segmentation.main.whiteKeys[midiNumber] = points
 
-    def drawAndMapKeys(self, contours, black):
-        colors = self.main.getColorsFromFile()
-        img = self.main.capture.background.copy()
+    def drawAndMapKeys(self, contours):
+        colors = self.segmentation.getColorsFromFile()
+        img = self.segmentation.main.capture.background.copy()
         for i in range(len(contours)):
             r, g, b = colors[i]
             key = np.zeros((len(img), len(img[0]), 3), np.uint8)
@@ -96,8 +98,12 @@ class SegmentWhite:
             cv.drawContours(key, [contours[i]], -1, (r, g, b), -1)
             cv.drawContours(img, [contours[i]], -1, (r, g, b), -1)
             cv.putText(img, str(i), (x - 5, y + 100), cv.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
-            if black:
-                self.main.assignBlackKey(x, key)
-            else:
-                self.assignWhiteKey(x, key)
-        self.main.showSegmentedKeys(img, black)
+            self.assignWhiteKey(x, key)
+        self.segmentation.showSegmentedKeys(img, 'White Keys')
+
+    @staticmethod
+    def _getBounds(box):
+        lower, higher = box[:2], box[2:]
+        x1 = (lower[0][0] + lower[1][0]) / 2
+        x2 = (higher[0][0] + higher[1][0]) / 2
+        return x1, x2

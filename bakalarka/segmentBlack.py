@@ -3,15 +3,17 @@ import numpy as np
 
 
 class SegmentBlack:
-    def __init__(self, main):
-        self.main = main
+    lowerBlack, higherBlack = [], []
+
+    def __init__(self, segmentation):
+        self.segmentation = segmentation
         self._blackKeysSegmentation()
 
     # noinspection DuplicatedCode
     def _getBlackKeysContours(self):
-        gray = cv.cvtColor(self.main.capture.background, cv.COLOR_BGR2GRAY)
+        gray = cv.cvtColor(self.segmentation.main.capture.background, cv.COLOR_BGR2GRAY)
         gray = cv.GaussianBlur(gray, (3, 3), 0)
-        ret, thresh = cv.threshold(gray, self.main.gui.thresh.get(), 255, cv.THRESH_BINARY_INV)
+        ret, thresh = cv.threshold(gray, self.segmentation.main.gui.thresh.get(), 255, cv.THRESH_BINARY_INV)
         kernel5 = np.ones((5, 5), np.uint8)
         kernel3 = np.ones((3, 3), np.uint8)
         thresh = cv.dilate(thresh, kernel5, iterations=1)
@@ -25,24 +27,24 @@ class SegmentBlack:
 
     def _blackKeysSegmentation(self):
         rawContours = self._getBlackKeysContours()
-        contours = self.main._filterContours(rawContours)
+        contours = self.segmentation.filterContours(rawContours)
         self._setBlackKeysYBound(contours)
         contours.sort(key=lambda ctr: cv.boundingRect(ctr)[0])
         print(f'Detected {len(contours)} Black Keys')
-        self.drawAndMapKeys(contours, True)
+        self.drawAndMapKeys(contours)
 
     def _setBlackKeysYBound(self, contours):
         averageYBound = sum([cv.boundingRect(cnt)[3] for cnt in contours]) / len(contours)
-        self.main.blackKeysYBound = int(averageYBound * 0.95)
+        self.segmentation.blackKeysYBound = int(averageYBound * 0.95)
 
     def assignBlackKey(self, x, key):
-        if self.main.capture.x_middle == 0:
+        if self.segmentation.main.capture.x_middle == 0:
             raise AttributeError()
-        points = self.main.getNonZeroPoints(key)
-        if x < self.main.capture.x_middle:
-            self.main.lowerBlack.append(points)
+        points = self.segmentation.getNonZeroPoints(key)
+        if x < self.segmentation.main.capture.x_middle:
+            self.lowerBlack.append(points)
         else:
-            self.main.higherBlack.append(points)
+            self.higherBlack.append(points)
 
     def mapBlackKeys(self):
         self._mapBlackHigherKeys()
@@ -53,23 +55,23 @@ class SegmentBlack:
         midiHigher = [61]
         for step in auxHigher:
             midiHigher.append(midiHigher[-1] + step)
-        for key in zip(midiHigher, self.main.higherBlack):
+        for key in zip(midiHigher, self.higherBlack):
             midiNumber, points = key
-            self.main.blackKeys[midiNumber] = points
+            self.segmentation.main.blackKeys[midiNumber] = points
 
     def _mapBlackLowerKeys(self):
         auxLower = [2, 2, 3, 2, 3] * 5
         midiLower = [58]
         for step in auxLower:
             midiLower.append(midiLower[-1] - step)
-        self.main.lowerBlack.reverse()
-        for key in zip(midiLower, self.main.lowerBlack):
+        self.lowerBlack.reverse()
+        for key in zip(midiLower, self.lowerBlack):
             midiNumber, points = key
-            self.main.blackKeys[midiNumber] = points
+            self.segmentation.main.blackKeys[midiNumber] = points
 
-    def drawAndMapKeys(self, contours, black):
-        colors = self.main.getColorsFromFile()
-        img = self.main.capture.background.copy()
+    def drawAndMapKeys(self, contours):
+        colors = self.segmentation.getColorsFromFile()
+        img = self.segmentation.main.capture.background.copy()
         for i in range(len(contours)):
             r, g, b = colors[i]
             key = np.zeros((len(img), len(img[0]), 3), np.uint8)
@@ -79,8 +81,5 @@ class SegmentBlack:
             cv.drawContours(key, [contours[i]], -1, (r, g, b), -1)
             cv.drawContours(img, [contours[i]], -1, (r, g, b), -1)
             cv.putText(img, str(i), (x - 5, y + 100), cv.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
-            if black:
-                self.assignBlackKey(x, key)
-            else:
-                self.main.assignWhiteKey(x, key)
-        self.main.showSegmentedKeys(img, black)
+            self.assignBlackKey(x, key)
+        self.segmentation.showSegmentedKeys(img, 'Black Keys')
