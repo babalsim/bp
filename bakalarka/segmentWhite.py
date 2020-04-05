@@ -9,7 +9,6 @@ class SegmentWhite:
         self.segmentation = segmentation
         self._whiteKeysSegmentation()
 
-    # noinspection DuplicatedCode
     def _getWhiteKeysContours(self):
         croppedKeys = self.segmentation.main.capture.background[0:self.segmentation.blackKeysYBound, 0:len(self.segmentation.main.capture.background[0])]
         gray = cv.cvtColor(croppedKeys, cv.COLOR_BGR2GRAY)

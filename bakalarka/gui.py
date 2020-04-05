@@ -5,6 +5,7 @@ import cv2 as cv
 from cropper import Cropper
 from marker import Marker
 from segmentation import Segmentation
+from export import Export
 
 
 class Gui:
@@ -43,12 +44,12 @@ class Gui:
             x=self.SIZE_X + 5, y=5)
 
     def _initExportGUI(self):
-        Button(self.frame, text='Export', padx=10, pady=1, command=self.main.export).place(
+        Button(self.frame, text='Export', padx=10, pady=1, command=self.doExport).place(
             x=self.SIZE_X + 125, y=5)
 
     def _initTimeControlGUI(self):
         self.position = DoubleVar(0)
-        self.scale = Scale(self.frame, from_=0, orient=HORIZONTAL,
+        self.scale = Scale(self.frame, from_=0, orient=HORIZONTAL, label="Time Control",
                            length=self.SIZE_X, tickinterval=15, command=self._updatePosition, variable=self.position)
         self.scale.place(x=0, y=self.SIZE_Y + 20)
 
@@ -137,6 +138,12 @@ class Gui:
             self.frame.update()
         except FileNotFoundError:
             messagebox.showinfo("Chyba", "Súbor sa nepodarilo prečítať")
+
+    def doExport(self):
+        self.stop()
+        fileTypes = [('MIDI File', '.midi'), ('MusicXML File', '.musicxml')]
+        filename = filedialog.asksaveasfilename(filetypes=fileTypes, defaultextension='.midi')
+        Export(filename, self.main.forExport, self.tempo.get(), self.transpose.get())
 
     def showFrame(self):
         self.drawFrame()

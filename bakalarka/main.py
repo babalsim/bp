@@ -2,16 +2,9 @@
 
 import numpy as np
 import cv2 as cv
-import time
-from tkinter import filedialog
-from os import remove
-
-from music21 import converter
 
 from capture import Capture
 from gui import Gui
-from midiutil import MIDIFile
-from segmentation import Segmentation
 
 
 class Program:
@@ -33,6 +26,7 @@ class Program:
             self.capture.y_start, self.capture.y_end = 277, 432
             self.capture.x_start, self.capture.x_end = 200, 772
             self.capture.x_middle, self.capture.y_middle = 450, 390
+            self.gui.thresh.set(180)
             self.gui.drawFrame()
         self.gui.master.mainloop()
 
@@ -44,11 +38,11 @@ class Program:
         self.capture.grab()
         if self.gui.transcribing.get():
             self.transcribe(self.blackKeys, self.blackPressed, 0.97)
-            self.transcribe(self.whiteKeys, self.whitePressed, 0.95)
+            self.transcribe(self.whiteKeys, self.whitePressed, 0.97)
         self.gui.showFrame()
         self.gui.showPosition()
 
-    def transcribe(self, keys, previous_pressed, delta=0.97):
+    def transcribe(self, keys, previous_pressed, delta):
         frame = cv.cvtColor(self.capture.getCurrentFrameCropped(), cv.COLOR_BGR2GRAY)
         pressed = set()
         for key, points in keys.items():
@@ -78,32 +72,7 @@ class Program:
         self.forExport.append((key, duration, previous_pressed[key]))
         print(f'{key} pressed for {duration} ms')
 
-    def export(self):
-        self.gui.stop()
-        fileTypes = [('MIDI File', '.midi'), ('MusicXML File', '.musicxml')]
-        filename = filedialog.asksaveasfilename(filetypes=fileTypes, defaultextension='.midi')
-        if '.midi' in filename:
-            self._exportMIDI(filename)
-        elif '.musicxml' in filename:
-            self._exportMusicXML(filename)
-        else:
-            raise RuntimeError('Chosen Wrong File Extension')
-        print(f'Successfully Exported To {filename}')
 
-    def _exportMIDI(self, filename='.tmpMidiFileForExport'):
-        self.gui.stop()
-        midi = MIDIFile(1)
-        midi.addTempo(0, 0, self.gui.tempo.get())
-        for pitch, duration, start in self.forExport:
-            midi.addNote(0, 0, pitch + self.gui.transpose.get(), start / 1000, duration / 1000, 100)
-        with open(filename, 'wb') as file:
-            midi.writeFile(file)
-
-    def _exportMusicXML(self, filename):
-        self._exportMIDI()
-        score = converter.parse('.tmpMidiFileForExport', format='midi')
-        remove('.tmpMidiFileForExport')
-        score.write('musicxml', filename)
 
 
 if __name__ == '__main__':

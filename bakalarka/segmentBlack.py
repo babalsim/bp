@@ -9,7 +9,6 @@ class SegmentBlack:
         self.segmentation = segmentation
         self._blackKeysSegmentation()
 
-    # noinspection DuplicatedCode
     def _getBlackKeysContours(self):
         gray = cv.cvtColor(self.segmentation.main.capture.background, cv.COLOR_BGR2GRAY)
         gray = cv.GaussianBlur(gray, (3, 3), 0)
