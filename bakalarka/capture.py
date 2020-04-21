@@ -1,5 +1,6 @@
 import cv2 as cv
 from PIL import Image, ImageTk
+from tkinter import BooleanVar
 
 
 class Capture(cv.VideoCapture):
@@ -7,6 +8,7 @@ class Capture(cv.VideoCapture):
     x_start, y_start, x_end, y_end = 0, 0, 0, 0
     sizeX, sizeY = 0, 0
     x_middle, y_middle = 0, 0
+    flip = None
 
     def __init__(self, filename=None):
         if filename is not None:
@@ -29,12 +31,17 @@ class Capture(cv.VideoCapture):
 
     def getCurrentFrame(self):
         _, frame = self.retrieve()
+        if self.flip.get():
+            frame = cv.flip(frame, -1)
         return frame
 
     def getCurrentFrameCropped(self):
         frame = self.getCurrentFrame()
         cropped = frame[self.y_start:self.y_end, self.x_start:self.x_end]
         return cropped
+
+    def getCurrentFrameGrayCropped(self):
+        return cv.cvtColor(self.getCurrentFrameCropped(), cv.COLOR_BGR2GRAY)
 
     def getNextFrame(self):
         self.grab()
@@ -66,8 +73,11 @@ class Capture(cv.VideoCapture):
                     frame[i][j] = [255, 0, 0]
         return frame
 
+    def getSubtractedFrame(self, frame1, frame2):
+        return frame1 - frame2
+
     def getSubtractedFramePhotoImage(self, frame1, frame2):
-        frame = frame1 - frame2
+        frame = self.getSubtractedFrame(frame1, frame2)
         return ImageTk.PhotoImage(image=Image.fromarray(frame).resize((self.sizeX, self.sizeY), Image.ANTIALIAS))
 
     def getPhotoImageFromFrame(self, frame):

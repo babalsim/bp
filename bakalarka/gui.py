@@ -70,14 +70,19 @@ class Gui:
         Checkbutton(self.frame, text='HandFilter', variable=self.handFilter).place(x=self.SIZE_X + 5, y=165)
         self.transcribing = BooleanVar(value=False)
         Checkbutton(self.frame, text='Transcribing', variable=self.transcribing).place(x=self.SIZE_X + 5, y=185)
+        self.main.capture.flip = BooleanVar(value=True)
+        Checkbutton(self.frame, text='Flip', variable=self.main.capture.flip).place(x=self.SIZE_X + 5, y=205)
+        self.manualThresh = BooleanVar(value=False)
+        Checkbutton(self.frame, text='Manual Global Threshold', variable=self.manualThresh)\
+            .place(x=self.SIZE_X + 5, y=65)
 
     def _initMidiParameters(self):
         self.tempo = IntVar(value=60)
-        Label(self.frame, text='Tempo').place(x=self.SIZE_X + 5, y=220)
-        Spinbox(self.frame, from_=20, to=150, textvariable=self.tempo, width=5).place(x=self.SIZE_X + 5, y=240)
+        Label(self.frame, text='Tempo').place(x=self.SIZE_X + 5, y=240)
+        Spinbox(self.frame, from_=20, to=150, textvariable=self.tempo, width=5).place(x=self.SIZE_X + 5, y=260)
         self.transpose = IntVar(value=0)
-        Label(self.frame, text='Transpose').place(x=self.SIZE_X + 55, y=220)
-        Spinbox(self.frame, from_=-10, to=10, textvariable=self.transpose, width=5).place(x=self.SIZE_X + 55, y=240)
+        Label(self.frame, text='Transpose').place(x=self.SIZE_X + 55, y=240)
+        Spinbox(self.frame, from_=-10, to=10, textvariable=self.transpose, width=5).place(x=self.SIZE_X + 55, y=260)
 
     def _initThreshParameterPicker(self):
         self.thresh = IntVar(value=85)
@@ -149,10 +154,10 @@ class Gui:
         self.drawFrame()
 
     def drawFrame(self):
-        if self.transcribing.get() and False:  #####################################################  to do
-            frame1 = cv.cvtColor(self.main.capture.background, cv.COLOR_BGR2GRAY)
-            frame2 = cv.cvtColor(self.main.capture.getCurrentFrameCropped(), cv.COLOR_BGR2GRAY)
-            self.currentFrameImage = self.main.capture.getSubtractedFramePhotoImage(frame1, frame2)
+        if self.transcribing.get():  #####################################################  to do
+            frame1 = self.main.capture.grayBackground
+            frame2 = self.main.capture.getCurrentFrameGrayCropped()
+            self.currentFrameImage = self.main.capture.getSubtractedFramePhotoImage(frame2, frame1)
         else:
             self.currentFrameImage = self.main.capture.getCurrentFramePhotoImage()
         self.drawImage(self.currentFrameImage)

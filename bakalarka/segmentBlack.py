@@ -9,10 +9,13 @@ class SegmentBlack:
         self.segmentation = segmentation
         self._blackKeysSegmentation()
 
-    def _getBlackKeysContours(self):
+    def _getBlackKeysContours(self, thresh_value=None):
         gray = cv.cvtColor(self.segmentation.main.capture.background, cv.COLOR_BGR2GRAY)
         gray = cv.GaussianBlur(gray, (3, 3), 0)
-        ret, thresh = cv.threshold(gray, self.segmentation.main.gui.thresh.get(), 255, cv.THRESH_BINARY_INV)
+        if thresh_value is None:
+            ret, thresh = cv.threshold(gray, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU)
+        else:
+            ret, thresh = cv.threshold(gray, self.segmentation.main.gui.thresh.get(), 255, cv.THRESH_BINARY_INV)
         kernel5 = np.ones((5, 5), np.uint8)
         kernel3 = np.ones((3, 3), np.uint8)
         thresh = cv.dilate(thresh, kernel5, iterations=1)
@@ -48,6 +51,18 @@ class SegmentBlack:
     def mapBlackKeys(self):
         self._mapBlackHigherKeys()
         self._mapBlackLowerKeys()
+        self._initAvgBlack()
+
+    def _initAvgBlack(self):
+        for key, points in self.segmentation.main.blackKeys.items():
+            self._setAvgKey(key, points)
+
+    def _setAvgKey(self, key, points):
+        s = 0
+        for x, y in points:
+            s += self.segmentation.main.capture.grayBackground[y][x]
+        avg = s / len(points)
+        self.segmentation.main.blackAvgKeys[key] = avg
 
     def _mapBlackHigherKeys(self):
         auxHigher = [2, 3, 2, 2, 3] * 5

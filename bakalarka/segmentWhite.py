@@ -32,7 +32,7 @@ class SegmentWhite:
 
     def _splitWideContours(self, contours):
         averageWidth = sum([cv.boundingRect(cnt)[2] for cnt in contours]) / len(contours)
-        biggerContours = [cnt for cnt in enumerate(contours) if cv.boundingRect(cnt[1])[2] > averageWidth * 1.85]
+        biggerContours = [cnt for cnt in enumerate(contours) if cv.boundingRect(cnt[1])[2] > averageWidth * 1.4]
         while biggerContours:
             index, cnt = biggerContours.pop()
             contours.pop(index)

@@ -4,6 +4,7 @@ from segmentWhite import SegmentWhite
 
 
 class Segmentation:
+    blackKeysYBound = None
 
     def __init__(self, main):
         self.main = main
