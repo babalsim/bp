@@ -24,7 +24,7 @@ class Marker:
 
     def mouseMark(self, event, x, y, flags, param):
         if event == cv.EVENT_LBUTTONDOWN:
-            self.capture.x_middle, self.capture.y_middle = x, y
+            self.capture.x_middle, self.capture.y_middle = x - self.capture.x_start, y - self.capture.y_start
             print('x', self.capture.x_middle, 'y', self.capture.y_middle)
             cv.circle(self.image, (x, y), 5, (255, 0, 0), 5)
             cv.imshow('image', self.image)

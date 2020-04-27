@@ -33,7 +33,7 @@ class Gui:
 
     def _initMasterFrameCanvasGUI(self):
         self.master = Tk()
-        self.master.title('Bakalarka')
+        self.master.title('Piano tones recognition')
         self.frame = Frame(self.master, width=self.SIZE_X + 250, height=self.SIZE_Y + 100)
         self.frame.pack()
         self.canvas = Canvas(self.frame, width=self.SIZE_X, height=self.SIZE_Y)
@@ -45,7 +45,7 @@ class Gui:
 
     def _initExportGUI(self):
         Button(self.frame, text='Export', padx=10, pady=1, command=self.doExport).place(
-            x=self.SIZE_X + 125, y=5)
+            x=self.SIZE_X + 125, y=250)
 
     def _initTimeControlGUI(self):
         self.position = DoubleVar(0)
@@ -54,7 +54,7 @@ class Gui:
         self.scale.place(x=0, y=self.SIZE_Y + 20)
 
     def _initBackgroundCropGUI(self):
-        Button(self.frame, text='Set Background', padx=10, pady=1, command=self._setBackground).place(
+        Button(self.frame, text='Keys Segmentation', padx=10, pady=1, command=self._setBackground).place(
             x=self.SIZE_X + 5, y=95)
         Button(self.frame, text='Crop Keyboard', padx=10, pady=1, command=self._cropKeyboardArea).place(
             x=self.SIZE_X + 5, y=35)
@@ -71,10 +71,10 @@ class Gui:
         self.transcribing = BooleanVar(value=False)
         Checkbutton(self.frame, text='Transcribing', variable=self.transcribing).place(x=self.SIZE_X + 5, y=185)
         self.main.capture.flip = BooleanVar(value=True)
-        Checkbutton(self.frame, text='Flip', variable=self.main.capture.flip).place(x=self.SIZE_X + 5, y=205)
+        Checkbutton(self.frame, text='Flip', variable=self.main.capture.flip, command=self.showFrame).place(x=self.SIZE_X + 5, y=205)
         self.manualThresh = BooleanVar(value=False)
-        Checkbutton(self.frame, text='Manual Global Threshold', variable=self.manualThresh)\
-            .place(x=self.SIZE_X + 5, y=65)
+        Checkbutton(self.frame, text='Manual Global Threshold', variable=self.manualThresh,
+                    command=self._setShowManualThresh).place(x=self.SIZE_X + 5, y=65)
 
     def _initMidiParameters(self):
         self.tempo = IntVar(value=60)
@@ -86,9 +86,22 @@ class Gui:
 
     def _initThreshParameterPicker(self):
         self.thresh = IntVar(value=85)
-        Label(self.frame, text='Thresh').place(x=self.SIZE_X + 135, y=85)
-        Spinbox(self.frame, from_=0, to=255, textvariable=self.thresh, width=5,
-                command=self._showThreshParameter).place(x=self.SIZE_X + 135, y=105)
+        self.tLabel = Label(self.frame, text='Thresh')
+        self.tSpinBox = Spinbox(self.frame, from_=50, to=200, textvariable=self.thresh, width=5, command=self._showThreshParameter)
+
+    def _setShowManualThresh(self):
+        if self.manualThresh.get():
+            self._placeManualThresh()
+        else:
+            self._forgetPlaceManualThresh()
+
+    def _placeManualThresh(self):
+        self.tLabel.place(x=self.SIZE_X + 135, y=85)
+        self.tSpinBox.place(x=self.SIZE_X + 135, y=105)
+
+    def _forgetPlaceManualThresh(self):
+        self.tLabel.place_forget()
+        self.tSpinBox.place_forget()
 
     def _showThreshParameter(self):
         gray = cv.cvtColor(self.main.capture.getCurrentFrameCropped(), cv.COLOR_BGR2GRAY)
@@ -123,9 +136,10 @@ class Gui:
         self.scale['to'] = self.duration
 
     def _updatePosition(self, position):
-        frameNumber = int(position) * self.fps
-        self.main.capture.set(cv.CAP_PROP_POS_FRAMES, frameNumber)
-        self.showFrame()
+        if self.main.capture.isOpened():
+            frameNumber = int(position) * self.fps
+            self.main.capture.set(cv.CAP_PROP_POS_FRAMES, frameNumber)
+            self.showFrame()
 
     def showPosition(self):
         self.position.set(self.main.capture.get(cv.CAP_PROP_POS_MSEC) / 1000)
@@ -154,12 +168,8 @@ class Gui:
         self.drawFrame()
 
     def drawFrame(self):
-        if self.transcribing.get():  #####################################################  to do
-            frame1 = self.main.capture.grayBackground
-            frame2 = self.main.capture.getCurrentFrameGrayCropped()
-            self.currentFrameImage = self.main.capture.getSubtractedFramePhotoImage(frame2, frame1)
-        else:
-            self.currentFrameImage = self.main.capture.getCurrentFramePhotoImage()
+        frame = self.main.capture.getCurrentFrameGrayCropped()
+        self.currentFrameImage = self.main.capture.getPhotoImageFromFrame(frame)
         self.drawImage(self.currentFrameImage)
 
     def drawImage(self, image):

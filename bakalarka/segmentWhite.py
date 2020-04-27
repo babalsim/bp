@@ -7,28 +7,21 @@ class SegmentWhite:
 
     def __init__(self, segmentation):
         self.segmentation = segmentation
-        self._whiteKeysSegmentation()
 
     def _getWhiteKeysContours(self):
-        croppedKeys = self.segmentation.main.capture.background[0:self.segmentation.blackKeysYBound, 0:len(self.segmentation.main.capture.background[0])]
-        gray = cv.cvtColor(croppedKeys, cv.COLOR_BGR2GRAY)
-        gray = cv.GaussianBlur(gray, (3, 3), 0)
-        ret, thresh = cv.threshold(gray, self.segmentation.main.gui.thresh.get(), 255, cv.THRESH_BINARY)
-        kernel = np.ones((5, 5), np.uint8)
-        thresh = cv.dilate(thresh, kernel, iterations=1)
-        dist_transform = cv.distanceTransform(thresh, cv.DIST_LABEL_PIXEL, 5)
-        ret, sure_fg = cv.threshold(dist_transform, 0.05 * dist_transform.max(), 255, 0)
-        sure_fg = np.uint8(sure_fg)
-        contours, hierarchy = cv.findContours(sure_fg, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+        croppedKeys = self.segmentation.main.capture.grayBackground[0:self.segmentation.blackKeysYBound, 0:len(self.segmentation.main.capture.background[0])]
+        thresh = self.segmentation.getThreshed(croppedKeys, cv.THRESH_BINARY)
+        thresh = cv.dilate(thresh, self.segmentation.kernel5, iterations=1)
+        contours, hierarchy = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
         contours = self._splitWideContours(contours)
         return contours
 
-    def _whiteKeysSegmentation(self):
+    def whiteKeysSegmentation(self):
         rawContours = self._getWhiteKeysContours()
         contours = self.segmentation.filterContours(self._splitWideContours(rawContours))
         contours.sort(key=lambda ctr: cv.boundingRect(ctr)[0])
         print(f'Detected {len(contours)} White Keys')
-        self.drawAndMapKeys(contours)
+        self.segmentation.drawAndMapKeys(contours, 'white')
 
     def _splitWideContours(self, contours):
         averageWidth = sum([cv.boundingRect(cnt)[2] for cnt in contours]) / len(contours)
@@ -56,7 +49,7 @@ class SegmentWhite:
     def assignWhiteKey(self, x, key):
         if self.segmentation.main.capture.x_middle == 0:
             raise AttributeError()
-        points = self.segmentation.getNonZeroPoints(key)
+        points = self.segmentation.getNonZeroPoints(key, (self.segmentation.blackKeysYBound / 3) * 2)
         if x < self.segmentation.main.capture.x_middle:
             self.lowerWhite.append(points)
         else:
@@ -65,6 +58,18 @@ class SegmentWhite:
     def mapWhiteKeys(self):
         self._mapWhiteHigherKeys()
         self._mapWhiteLowerKeys()
+        self._initAvgWhite()
+
+    def _initAvgWhite(self):
+        for key, points in self.segmentation.main.whiteKeys.items():
+            self._setAvgKey(key, points)
+
+    def _setAvgKey(self, key, points):
+        s = 0
+        for x, y in points:
+            s += self.segmentation.main.capture.grayBackground[y][x]
+        avg = s / len(points)
+        self.segmentation.main.whiteAvgKeys[key] = avg
 
     def _mapWhiteHigherKeys(self):
         auxHigher = [2, 1, 2, 2, 2, 1, 2] * 5
@@ -84,21 +89,6 @@ class SegmentWhite:
         for key in zip(midiLower, self.lowerWhite):
             midiNumber, points = key
             self.segmentation.main.whiteKeys[midiNumber] = points
-
-    def drawAndMapKeys(self, contours):
-        colors = self.segmentation.getColorsFromFile()
-        img = self.segmentation.main.capture.background.copy()
-        for i in range(len(contours)):
-            r, g, b = colors[i]
-            key = np.zeros((len(img), len(img[0]), 3), np.uint8)
-            M = cv.moments(contours[i])
-            x = int(M['m10'] / M['m00'])
-            y = int(M['m01'] / M['m00'])
-            cv.drawContours(key, [contours[i]], -1, (r, g, b), -1)
-            cv.drawContours(img, [contours[i]], -1, (r, g, b), -1)
-            cv.putText(img, str(i), (x - 5, y + 100), cv.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
-            self.assignWhiteKey(x, key)
-        self.segmentation.showSegmentedKeys(img, 'White Keys')
 
     @staticmethod
     def _getBounds(box):

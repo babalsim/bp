@@ -15,7 +15,7 @@ class Program:
     playing = False
     middleC = None
     blackKeys, whiteKeys = {}, {}
-    blackAvgKeys = {}
+    blackAvgKeys, whiteAvgKeys = {}, {}
     blackPressed, whitePressed = {}, {}
     forExport = []
     segmentBlack, segmentWhite = None, None
@@ -38,35 +38,30 @@ class Program:
     def step(self):
         self.capture.grab()
         if self.gui.transcribing.get():
-            self._transcribeBlack(self.blackKeys, self.blackPressed, 4)
-            #self.transcribe(self.whiteKeys, self.whitePressed, 0.97)
+            # self._transcribeBlack(self.blackKeys, self.blackPressed, 3)
+            self.transcribeWhite(self.whiteKeys, self.whitePressed, 4)
         self.gui.showFrame()
         self.gui.showPosition()
 
     def _transcribeBlack(self, keys, previous_pressed, delta):
         pressed = set()
         for key, points in keys.items():
-            if self._getChangeOfAvgBrightness(key, points) > delta:
+            if self._getChangeOfAvgBrightness(points, self.blackAvgKeys[key]) > delta:
                 pressed.add(key)
         self.detectPressed(pressed, previous_pressed)
 
-    def _getChangeOfAvgBrightness(self, key, points):
+    def _getChangeOfAvgBrightness(self, points, b_brightness):
         frame = self.capture.getCurrentFrameGrayCropped()
         s = 0
         for x, y in points:
             s += frame[y][x]
         avg = s / len(points)
-        return abs(avg - self.blackAvgKeys[key])
+        return abs(avg - b_brightness)
 
-    def transcribe(self, keys, previous_pressed, delta):
-        frame = cv.cvtColor(self.capture.getCurrentFrameCropped(), cv.COLOR_BGR2GRAY)
+    def transcribeWhite(self, keys, previous_pressed, delta):
         pressed = set()
         for key, points in keys.items():
-            dif = 0
-            for x, y in points:
-                if self.capture.grayBackground[y][x] != frame[y][x]:
-                    dif += 1
-            if dif / len(points) > delta:
+            if self._getChangeOfAvgBrightness(points, self.whiteAvgKeys[key]) > delta:
                 pressed.add(key)
         self.detectPressed(pressed, previous_pressed)
 
@@ -85,11 +80,9 @@ class Program:
 
     def releaseKey(self, key, previous_pressed):
         duration = self.capture.get(cv.CAP_PROP_POS_MSEC) - previous_pressed[key]
-        if duration > 100:
+        if duration > 20:
             self.forExport.append((key, duration, previous_pressed[key]))
             print(f'{key} pressed for {duration} ms')
-
-
 
 
 if __name__ == '__main__':
