@@ -38,8 +38,8 @@ class Program:
     def step(self):
         self.capture.grab()
         if self.gui.transcribing.get():
-            # self._transcribeBlack(self.blackKeys, self.blackPressed, 3)
-            self.transcribeWhite(self.whiteKeys, self.whitePressed, 4)
+            self._transcribeBlack(self.blackKeys, self.blackPressed, 6)
+            self._transcribeWhite(self.whiteKeys, self.whitePressed, 4)
         self.gui.showFrame()
         self.gui.showPosition()
 
@@ -53,12 +53,16 @@ class Program:
     def _getChangeOfAvgBrightness(self, points, b_brightness):
         frame = self.capture.getCurrentFrameGrayCropped()
         s = 0
+        r = 0
         for x, y in points:
+            if frame[y][x] == 255:
+                r += 1
+                continue
             s += frame[y][x]
-        avg = s / len(points)
+        avg = s / (len(points) - r)
         return abs(avg - b_brightness)
 
-    def transcribeWhite(self, keys, previous_pressed, delta):
+    def _transcribeWhite(self, keys, previous_pressed, delta):
         pressed = set()
         for key, points in keys.items():
             if self._getChangeOfAvgBrightness(points, self.whiteAvgKeys[key]) > delta:

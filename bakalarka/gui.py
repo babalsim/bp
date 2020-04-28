@@ -66,10 +66,10 @@ class Gui:
             x=self.SIZE_X + 115, y=35)
 
     def _initCheckButtons(self):
-        self.handFilter = BooleanVar(value=False)
-        Checkbutton(self.frame, text='HandFilter', variable=self.handFilter).place(x=self.SIZE_X + 5, y=165)
+        self.main.capture.handFilter = BooleanVar(value=False)
+        Checkbutton(self.frame, text='HandFilter', variable=self.main.capture.handFilter, command=self._checkHandFilter).place(x=self.SIZE_X + 5, y=165)
         self.transcribing = BooleanVar(value=False)
-        Checkbutton(self.frame, text='Transcribing', variable=self.transcribing).place(x=self.SIZE_X + 5, y=185)
+        Checkbutton(self.frame, text='Transcribing', variable=self.transcribing, command=self._checkHandFilter).place(x=self.SIZE_X + 5, y=185)
         self.main.capture.flip = BooleanVar(value=True)
         Checkbutton(self.frame, text='Flip', variable=self.main.capture.flip, command=self.showFrame).place(x=self.SIZE_X + 5, y=205)
         self.manualThresh = BooleanVar(value=False)
@@ -109,6 +109,11 @@ class Gui:
         ret, thresh = cv.threshold(gray, self.thresh.get(), 255, cv.THRESH_BINARY_INV)
         self.threshExampleImage = self.main.capture.getPhotoImageFromFrame(thresh)
         self.drawImage(self.threshExampleImage)
+
+    def _checkHandFilter(self):
+        if not self.transcribing.get() and self.main.capture.handFilter.get():
+            self.main.capture.handFilter.set(False)
+            messagebox.showinfo('Správa', 'Filter rúk bol deaktivovaný, keďže sa aktuálne nemôže robiť transkripcia.')
 
     def _playOrStop(self):
         if self.main.playing:
@@ -168,7 +173,7 @@ class Gui:
         self.drawFrame()
 
     def drawFrame(self):
-        frame = self.main.capture.getCurrentFrameGrayCropped()
+        frame = self.main.capture.getCurrentFrameCropped()
         self.currentFrameImage = self.main.capture.getPhotoImageFromFrame(frame)
         self.drawImage(self.currentFrameImage)
 

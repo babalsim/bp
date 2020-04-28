@@ -8,7 +8,7 @@ class Capture(cv.VideoCapture):
     x_start, y_start, x_end, y_end = 0, 0, 0, 0
     sizeX, sizeY = 0, 0
     x_middle, y_middle = 0, 0
-    flip = None
+    flip, handFilter = None, None
 
     def __init__(self, filename=None):
         if filename is not None:
@@ -38,6 +38,8 @@ class Capture(cv.VideoCapture):
     def getCurrentFrameCropped(self):
         frame = self.getCurrentFrame()
         cropped = frame[self.y_start:self.y_end, self.x_start:self.x_end]
+        if self.handFilter.get():
+            cropped = self.filterHands(cropped)
         return cropped
 
     def getCurrentFrameGrayCropped(self):
@@ -63,17 +65,17 @@ class Capture(cv.VideoCapture):
         self.grab()
         return self.getCurrentFramePhotoImage()
 
-    def removeHands(self, frame):
-        for i in range(self.y_start, self.y_end):
-            for j in range(self.x_start, self.x_end):
-                r, g, b = map(int, frame[i][j])
-                if r > 65 and g > 40 and b > 30:
-                    # and max(r, g, b) - min(r, g, b) > 15
-                    #  and r > g and r > b):
-                    frame[i][j] = [255, 0, 0]
+    @staticmethod
+    def filterHands(frame):
+        for i in range(len(frame)):
+            for j in range(len(frame[0])):
+                b, g, r = map(int, frame[i][j])
+                if r > 95 and g > 40 and b > 20 and r > g and r > b:
+                    frame[i][j] = [255, 255, 255]
         return frame
 
-    def getSubtractedFrame(self, frame1, frame2):
+    @staticmethod
+    def getSubtractedFrame(frame1, frame2):
         return frame1 - frame2
 
     def getSubtractedFramePhotoImage(self, frame1, frame2):
