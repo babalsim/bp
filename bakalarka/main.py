@@ -5,6 +5,8 @@ import cv2 as cv
 
 from capture import Capture
 from gui import Gui
+import multiprocessing
+import time
 
 
 class Program:
@@ -38,8 +40,12 @@ class Program:
     def step(self):
         self.capture.grab()
         if self.gui.transcribing.get():
+            s = time.time()
             self._transcribeBlack(self.blackKeys, self.blackPressed, 6)
+            print(f'TranscribeBlack step processed in {time.time() - s} ms')
+            s = time.time()
             self._transcribeWhite(self.whiteKeys, self.whitePressed, 4)
+            print(f'TranscribeWhite step processed in {time.time() - s} ms')
         self.gui.showFrame()
         self.gui.showPosition()
 

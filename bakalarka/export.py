@@ -11,7 +11,6 @@ class Export:
         self._runExport(filename)
 
     def _runExport(self, filename):
-        self._prepare()
         if '.midi' in filename:
             self._exportMIDI(filename)
         elif '.musicxml' in filename:
@@ -20,14 +19,12 @@ class Export:
             raise RuntimeError('Chosen Wrong File Extension')
         print(f'Successfully Exported To {filename}')
 
-    def _prepare(self):
-        pass
-
     def _exportMIDI(self, filename='.tmpMidiFileForExport'):
         midi = MIDIFile(1)
         midi.addTempo(0, 0, self.tempo)
         for pitch, duration, start in self.data:
-            midi.addNote(0, 0, pitch + self.transpose, start / 1000, duration / 1000, 100)
+            if duration > 100:
+                midi.addNote(0, 0, pitch + self.transpose, start / 1000, duration / 1000, 100)
         with open(filename, 'wb') as file:
             midi.writeFile(file)
 

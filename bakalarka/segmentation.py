@@ -2,6 +2,7 @@ import cv2 as cv
 from segmentBlack import SegmentBlack
 from segmentWhite import SegmentWhite
 import numpy as np
+import time
 
 
 class Segmentation:
@@ -10,14 +11,19 @@ class Segmentation:
     kernel3 = np.ones((3, 3), np.uint8)
     blurredBackground = None
     segmentBlack, segmentWhite = None, None
+    LOWER_RESOLUTION = 80000
 
     def __init__(self, main):
         self.main = main
         self._prepareForSegmentation()
+        s = time.time()
         self.segmentBlack = SegmentBlack(self)
         self.segmentBlack.blackKeysSegmentation()
+        print(f'Black keys was segmented in {time.time() - s} ms')
+        t = time.time()
         self.segmentWhite = SegmentWhite(self)
         self.segmentWhite.whiteKeysSegmentation()
+        print(f'White keys was segmented in {time.time() - t} ms')
         self._mapKeys()
         cv.waitKey(0)
 
