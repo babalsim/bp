@@ -1,8 +1,10 @@
+import time
+
 import cv2 as cv
+import numpy as np
+
 from segmentBlack import SegmentBlack
 from segmentWhite import SegmentWhite
-import numpy as np
-import time
 
 
 class Segmentation:

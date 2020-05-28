@@ -1,6 +1,5 @@
 import cv2 as cv
 from PIL import Image, ImageTk
-from tkinter import BooleanVar
 
 
 class Capture(cv.VideoCapture):

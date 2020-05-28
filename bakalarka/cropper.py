@@ -1,4 +1,5 @@
 from tkinter import messagebox
+
 import cv2 as cv
 
 
@@ -61,7 +62,8 @@ class Cropper:
         self.capture.x_end, self.capture.y_end = x, y
         self.fixKeyArea()
         frame = self.capture.getCurrentFrame()
-        print('y1', self.capture.y_start, 'y2', self.capture.y_end, 'x1', self.capture.x_start, 'x2',self.capture.x_end)
+        print('y1', self.capture.y_start, 'y2', self.capture.y_end, 'x1', self.capture.x_start, 'x2',
+              self.capture.x_end)
         roi = frame[self.capture.y_start:self.capture.y_end, self.capture.x_start:self.capture.x_end]
         cv.imshow("Cropped", roi)
         self.postCropKeyboard()

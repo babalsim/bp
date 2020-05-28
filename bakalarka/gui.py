@@ -1,11 +1,13 @@
 from os import path
 from tkinter import Frame, Canvas, Button, Scale, DoubleVar, Checkbutton, BooleanVar, HORIZONTAL, Tk, messagebox, \
     Spinbox, IntVar, Label, filedialog, NW
+
 import cv2 as cv
+
 from cropper import Cropper
+from export import Export
 from marker import Marker
 from segmentation import Segmentation
-from export import Export
 
 
 class Gui:
@@ -50,7 +52,7 @@ class Gui:
     def _initTimeControlGUI(self):
         self.position = DoubleVar(0)
         self.scale = Scale(self.frame, from_=0, orient=HORIZONTAL, label="Time Control",
-                           length=self.SIZE_X, tickinterval=15, command=self._updatePosition, variable=self.position)
+                           length=self.SIZE_X, tickinterval=15, command=self.updatePosition, variable=self.position)
         self.scale.place(x=0, y=self.SIZE_Y + 20)
 
     def _initBackgroundCropGUI(self):
@@ -67,11 +69,14 @@ class Gui:
 
     def _initCheckButtons(self):
         self.main.capture.handFilter = BooleanVar(value=False)
-        Checkbutton(self.frame, text='HandFilter', variable=self.main.capture.handFilter, command=self._checkHandFilter).place(x=self.SIZE_X + 5, y=165)
+        Checkbutton(self.frame, text='HandFilter', variable=self.main.capture.handFilter,
+                    command=self._checkHandFilter).place(x=self.SIZE_X + 5, y=165)
         self.transcribing = BooleanVar(value=False)
-        Checkbutton(self.frame, text='Transcribing', variable=self.transcribing, command=self._checkHandFilter).place(x=self.SIZE_X + 5, y=185)
+        Checkbutton(self.frame, text='Transcribing', variable=self.transcribing, command=self._checkHandFilter).place(
+            x=self.SIZE_X + 5, y=185)
         self.main.capture.flip = BooleanVar(value=True)
-        Checkbutton(self.frame, text='Flip', variable=self.main.capture.flip, command=self.showFrame).place(x=self.SIZE_X + 5, y=205)
+        Checkbutton(self.frame, text='Flip', variable=self.main.capture.flip, command=self.showFrame).place(
+            x=self.SIZE_X + 5, y=205)
         self.manualThresh = BooleanVar(value=False)
         Checkbutton(self.frame, text='Manual Global Threshold', variable=self.manualThresh,
                     command=self._setShowManualThresh).place(x=self.SIZE_X + 5, y=65)
@@ -87,7 +92,8 @@ class Gui:
     def _initThreshParameterPicker(self):
         self.thresh = IntVar(value=85)
         self.tLabel = Label(self.frame, text='Thresh')
-        self.tSpinBox = Spinbox(self.frame, from_=50, to=200, textvariable=self.thresh, width=5, command=self._showThreshParameter)
+        self.tSpinBox = Spinbox(self.frame, from_=50, to=200, textvariable=self.thresh, width=5,
+                                command=self._showThreshParameter)
 
     def _setShowManualThresh(self):
         if self.manualThresh.get():
@@ -140,7 +146,7 @@ class Gui:
         self.duration = self.frame_count / self.fps
         self.scale['to'] = self.duration
 
-    def _updatePosition(self, position):
+    def updatePosition(self, position):
         if self.main.capture.isOpened():
             frameNumber = int(position) * self.fps
             self.main.capture.set(cv.CAP_PROP_POS_FRAMES, frameNumber)

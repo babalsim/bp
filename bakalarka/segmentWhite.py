@@ -9,7 +9,8 @@ class SegmentWhite:
         self.segmentation = segmentation
 
     def _getWhiteKeysContours(self):
-        croppedKeys = self.segmentation.main.capture.grayBackground[0:self.segmentation.blackKeysYBound, 0:len(self.segmentation.main.capture.background[0])]
+        croppedKeys = self.segmentation.main.capture.grayBackground[0:self.segmentation.blackKeysYBound,
+                      0:len(self.segmentation.main.capture.background[0])]
         thresh = self.segmentation.getThreshed(croppedKeys, cv.THRESH_BINARY)
         thresh = cv.dilate(thresh, self.segmentation.kernel5, iterations=1)
         thresh = cv.erode(thresh, self.segmentation.kernel5, iterations=1)
