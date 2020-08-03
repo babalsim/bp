@@ -27,6 +27,8 @@ class Segmentation:
         self.segmentWhite.whiteKeysSegmentation()
         print(f'White keys was segmented in {time.time() - t} ms')
         self._mapKeys()
+        self.main.gui.showExample(self.main.capture.background, 'original')
+        self.main.gui.showExample(self.main.capture.grayBackground, 'gray+gauss')
         cv.waitKey(0)
 
     def _prepareForSegmentation(self):

@@ -9,6 +9,7 @@ class SegmentBlack:
 
     def _getBlackKeysContours(self):
         thresh = self.segmentation.getThreshed(self.segmentation.blurredBackground, cv.THRESH_BINARY_INV)
+        self.segmentation.main.gui.showExample(thresh, 'before morphological closing')
         if self.segmentation.main.capture.get(cv.CAP_PROP_FRAME_WIDTH) * \
                 self.segmentation.main.capture.get(cv.CAP_PROP_FRAME_HEIGHT) < self.segmentation.LOWER_RESOLUTION:
             thresh = cv.dilate(thresh, self.segmentation.kernel3, iterations=1)
@@ -16,6 +17,7 @@ class SegmentBlack:
         else:
             thresh = cv.dilate(thresh, self.segmentation.kernel5, iterations=1)
             thresh = cv.erode(thresh, self.segmentation.kernel5, iterations=2)
+        self.segmentation.main.gui.showExample(thresh, 'morphological closing')
         contours, hierarchy = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
         return contours
 
